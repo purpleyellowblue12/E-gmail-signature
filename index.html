@@ -58,6 +58,8 @@
       background: #fafafa;
     }
     input:focus { border-color: #6200ea; background: #fff; }
+    #f-email:focus { background: transparent; }
+    #email-wrap:focus-within { border-color: #6200ea; background: #fff; }
 
     textarea {
       width: 100%;
@@ -170,7 +172,11 @@
   <input type="text" id="f-title" placeholder="Founding Engineer" oninput="update()" />
 
   <label>Email Address</label>
-  <input type="email" id="f-email" placeholder="alec@etherealize.com" oninput="update()" />
+  <div style="display:flex;align-items:center;border:1px solid #e4e4e4;border-radius:8px;background:#fafafa;margin-bottom:14px;overflow:hidden;transition:border .2s;" id="email-wrap">
+    <input type="text" id="f-email" placeholder="alec" oninput="update()"
+      style="flex:1;padding:9px 6px 9px 12px;border:none;background:transparent;font-size:13.5px;color:#222;outline:none;" />
+    <span style="padding:9px 12px 9px 2px;font-size:13.5px;color:#999;white-space:nowrap;user-select:none;">@etherealize.com</span>
+  </div>
 
   <label>LinkedIn URL</label>
   <input type="url" id="f-linkedin" placeholder="https://linkedin.com/in/..." oninput="update()" />
@@ -230,23 +236,27 @@
   const LINKEDIN_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAYAAACohjseAAAABmJLR0QA/wD/AP+gvaeTAAAEPUlEQVRoge2aXWhcRRiGn5k9yf4lm2zbNF3boDRpgmmxaK2UtkmMkhujd2KjVxVpLBQVlYgghYAgosReCCE2EgTRkga0IEhFbdL4g4opakp+tFGENDEhJtGYXfbvjBc2JRt395xNd3t2lzx3e+abOe+7M2fmmzlHsEK7ku6pwRaFeBy4E9hMbjEL4ksl1RuBrvqvVi4KAG/rpyVB5ehDqCbr9KUNpeD1wOm6F0EoG+1KyqWrHyHIB3MAQsChgn2/a+Ghdy4Id+vFxxTiPatVZQCFLvbLa89cPiKEUM9L4C6rlWQKJdR9EvBaLSRziK2SazNpniKk1QoyTd4b1FIJrt7m4kBlMR6HxtgffgbHFwlFVKa0pQVTBqWAjpYqjjX4EKue2InZAI90jjA27c+UvhvG1BB9umkHrffGmgOo3Oqk78Ru7Fr2jnRTyo41+BKW7Sxz0LQ7e1caQ4N2TXLbFkfSmOptzrQJSjeGBsNR3XAiWQ7qaROUbgwN6gouji8mLFcKBpKUW42pZ/DkB7/xTzAat6xrYIrxXJ9FhyeXaXz1Rz7+aZ5Ff4RwVDEytcxzZyZo653ItMYbQrhaB1NeqTUpiOjZvcCvsK4FLFfMgclMZofXTpmnIG5ZVFdcnlxmredd5U6KHLa4dQIh/aZlP4YG7Zrkh5fvxlmQuLPbeifovDB1/XeNz8Wl9n1J220+NczAWOzsW6gJ9mx3U+LSUAquzASYXAgaSUyKocFCTSQ1B+B1x/ZuqdN4YGxy/xcjBDTfsZknG33UVZdSYIvNB6cXQ7z79QxvfnaV+eWwYbtrSWk3kW5KXBrdR6tp3pv4CNZXWsgLD1RwvNHH0bfH+eTyfEr3sCxLtknBuaf2JDW3Go9T4+yJWh40Gb+CZQYPVHq4Z2dxSnU0Keh5ooZd5eZzX8sM3n6La1313HYbHS2VpuMzYrB2u9swpqGmdN3t31/rZW9FkanYrNipBiM6KsXc4eH9ZabiLJ1FPx9ZoO3sr4xP+7FJwcEqDy89dCt11SWGdQ9WeUzdw7IenFsKc6Rz5PpOJKorvvj5L5pPDXPu0pxh/YpNdlP3sczgNxN/Ewj/f6Mc1RXPvH8Ffyj5JnpLcfzUcS2WGZxdCiUsm1sK0z+6kLS+XZMU2ePnuquxzKDRMccvMwHDNtae8sUjK2bReBgNUbNkrcF0sWEw19kwmOtsGMx1NgzmOhsGo7oianCSHYzEplXhiHGaFYnenNNxww2vP6TzaNcoNQlecoajijPfzsZc6x9d4MOhOdz2+P9fMKLo/W42btnqNgKh+G+0VjDzAcS6Xr7kEhLIZ4NKgko+VnKbP6VA9FutImMIhqQSsoM8HaZKVz3S/9bh70G9YrWYDHA+0F3fJwH8p+tPKniN/OnJ8w574REQKubYxnl88JDQeRbUYRDlVqlbJ3MIhpSuegLd9X0gFMC//PlNUecyhkMAAAAASUVORK5CYII=';
 
   // ── Image compression — square crop with face-biased vertical position ──
+  // Gmail strips border-radius CSS, so we bake the circle directly into the PNG.
+  // Transparent corners = permanent circle that survives copy-paste into Gmail.
   function compressImage(file, outPx, quality, callback) {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
       const sw = img.naturalWidth, sh = img.naturalHeight;
-      // Square crop: take the smaller dimension as crop size
       const cropSize = Math.min(sw, sh);
-      // Center horizontally; bias vertically toward top (15% offset) so faces land in frame
       const srcX = (sw - cropSize) / 2;
       const srcY = (sh - cropSize) * 0.15;
-      // Output a square canvas at outPx × outPx
       const canvas = document.createElement('canvas');
       canvas.width = outPx; canvas.height = outPx;
       const ctx = canvas.getContext('2d');
+      // Clip to circle BEFORE drawing — transparent corners baked into PNG
+      ctx.beginPath();
+      ctx.arc(outPx / 2, outPx / 2, outPx / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
       ctx.drawImage(img, srcX, srcY, cropSize, cropSize, 0, 0, outPx, outPx);
       URL.revokeObjectURL(url);
-      callback(canvas.toDataURL('image/jpeg', quality));
+      callback(canvas.toDataURL('image/png'));
     };
     img.src = url;
   }
@@ -296,7 +306,8 @@
   function buildSignatureHTML() {
     const name       = val('f-name')       || 'Full Name';
     const title      = val('f-title')      || 'Job Title';
-    const email      = val('f-email')      || 'email@etherealize.com';
+    const emailPrefix = val('f-email');
+    const email       = emailPrefix ? emailPrefix + '@etherealize.com' : 'email@etherealize.com';
     const linkedin   = val('f-linkedin');
     const website    = val('f-website')    || 'https://etherealize.com';
     const disclaimer = val('f-disclaimer');
@@ -304,10 +315,14 @@
     const websiteDisplay = formatWebsite(website);
 
     const photoCell = photo
-      ? `<img src="${photo}" width="110" height="110" style="border-radius:50%;display:block;width:110px;height:110px;" alt="${name}" />`
+      ? `<img src="${photo}" width="110" height="110" style="display:block;width:110px;height:110px;" alt="${name}" />`
       : `<div style="width:110px;height:110px;border-radius:50%;background:#e8e0f0;text-align:center;line-height:110px;font-size:40px;">👤</div>`;
 
-    const nameDisplay = name.toUpperCase();
+    // Format: "Thomas Luster" → "T H O M A S   L U S T E R"
+    const nameDisplay = name.toUpperCase()
+      .split(' ')
+      .map(word => word.split('').join('&nbsp;'))
+      .join('&nbsp;&nbsp;&nbsp;');
 
     const linkedinRow = linkedin ? `
         <tr>
@@ -328,14 +343,14 @@
 
     return `<table cellpadding="0" cellspacing="0" border="0" style="font-family:'Figtree',Arial,Helvetica,sans-serif;border-collapse:collapse;border-spacing:0;">
   <tr>
-    <td valign="top" align="left" style="padding-right:6px;">
+    <td valign="top" align="left" width="118" style="width:118px;min-width:118px;max-width:118px;padding-right:8px;">
       ${photoCell}
       <div style="height:12px;font-size:12px;line-height:12px;">&nbsp;</div>
       <img src="${ETHEREALIZE_LOGO_URI}" width="110" height="27" alt="Etherealize" style="display:block;width:110px;height:27px;" />
     </td>
     <td style="width:1px;background-color:#d0d0d0;padding:0;font-size:0;line-height:0;">&nbsp;</td>
     <td valign="top" style="padding-left:20px;">
-      <p style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#111111;letter-spacing:.7px;margin:0 0 4px 0;">${nameDisplay}</p>
+      <p style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#111111;margin:0 0 4px 0;">${nameDisplay}</p>
       <p style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#666666;margin:0 0 16px 0;">${title}</p>
       <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
         <tr>
