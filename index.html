@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Etherealize — Email Signature Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f0f3;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 20px;
+      gap: 36px;
+    }
+
+    .panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px;
+      width: 360px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 16px rgba(0,0,0,.08);
+    }
+
+    .panel h1 { font-size: 17px; font-weight: 700; color: #111; margin-bottom: 3px; }
+    .panel p.sub { font-size: 12.5px; color: #999; margin-bottom: 24px; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #777;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="url"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #e4e4e4;
+      border-radius: 8px;
+      font-size: 13.5px;
+      color: #222;
+      outline: none;
+      transition: border .2s;
+      margin-bottom: 14px;
+      background: #fafafa;
+    }
+    input:focus { border-color: #6200ea; background: #fff; }
+
+    textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #e4e4e4;
+      border-radius: 8px;
+      font-size: 12.5px;
+      color: #444;
+      outline: none;
+      transition: border .2s;
+      margin-bottom: 14px;
+      background: #fafafa;
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+    textarea:focus { border-color: #6200ea; background: #fff; }
+
+    /* Upload */
+    .upload-area {
+      border: 2px dashed #d8d8d8;
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+      cursor: pointer;
+      margin-bottom: 14px;
+      transition: border .2s, background .2s;
+      position: relative;
+    }
+    .upload-area:hover { border-color: #6200ea; background: #f9f5ff; }
+    .upload-area input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+      width: 100%; height: 100%; margin: 0;
+    }
+    .upload-area .upload-icon { font-size: 24px; margin-bottom: 4px; }
+    .upload-area p { font-size: 12px; color: #999; }
+    .upload-area p span { color: #6200ea; font-weight: 600; }
+    #photo-thumb {
+      display: none; width: 60px; height: 60px;
+      border-radius: 50%; object-fit: cover;
+      margin: 8px auto 0; border: 2px solid #6200ea;
+    }
+
+    /* Size meter */
+    .size-meter {
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: #888;
+    }
+    .size-bar-track {
+      height: 5px; background: #eee; border-radius: 99px; margin-top: 5px;
+    }
+    .size-bar-fill {
+      height: 5px; background: #4caf50; border-radius: 99px;
+      transition: width .3s, background .3s;
+    }
+
+    .divider { height: 1px; background: #eee; margin: 18px 0; }
+
+    .btn-copy {
+      width: 100%; padding: 12px;
+      background: #6200ea; color: #fff;
+      border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: background .2s, transform .1s;
+      margin-top: 4px;
+    }
+    .btn-copy:hover { background: #4a00b0; }
+    .btn-copy:active { transform: scale(.98); }
+
+    .toast {
+      display: none; margin-top: 10px;
+      background: #e8f5e9; border: 1px solid #a5d6a7;
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 12.5px; color: #2e7d32; text-align: center;
+    }
+
+    .instructions {
+      margin-top: 16px; background: #f5f0ff;
+      border-radius: 10px; padding: 13px 15px;
+    }
+    .instructions p { font-size: 12px; color: #666; line-height: 1.75; }
+    .instructions strong { color: #6200ea; }
+
+    .preview-panel {
+      background: #fff; border-radius: 16px;
+      padding: 32px; flex: 1;
+      min-width: 360px; max-width: 680px;
+      box-shadow: 0 2px 16px rgba(0,0,0,.08);
+    }
+    .preview-panel h2 {
+      font-size: 11px; font-weight: 600; color: #bbb;
+      text-transform: uppercase; letter-spacing: .8px; margin-bottom: 24px;
+    }
+
+    #sig-preview { padding: 4px 0; }
+  </style>
+</head>
+<body>
+
+<div class="panel">
+  <h1>✉️ Signature Generator</h1>
+  <p class="sub">Fill in the details, then copy to Gmail.</p>
+
+  <label>Full Name</label>
+  <input type="text" id="f-name" placeholder="Alec Charbonneau" oninput="update()" />
+
+  <label>Job Title</label>
+  <input type="text" id="f-title" placeholder="Founding Engineer" oninput="update()" />
+
+  <label>Email Address</label>
+  <input type="email" id="f-email" placeholder="alec@etherealize.com" oninput="update()" />
+
+  <label>LinkedIn URL</label>
+  <input type="url" id="f-linkedin" placeholder="https://linkedin.com/in/..." oninput="update()" />
+
+  <label>Website</label>
+  <input type="url" id="f-website" placeholder="https://etherealize.com" oninput="update()" />
+
+  <label>Legal Disclaimer</label>
+  <textarea id="f-disclaimer" oninput="update()">This email and any files transmitted with it may contain confidential, proprietary or legally privileged information and are intended solely for the use of the individual or entity to whom they are addressed. If you receive this message in error, please immediately delete it and all copies of it from your system, destroy any hard copies of it and notify the sender. If you are not the intended recipient, you are notified that disclosing, copying, distributing or taking any action in reliance on the contents of this information is strictly prohibited.</textarea>
+
+  <label>Headshot</label>
+  <div class="upload-area" id="upload-area">
+    <input type="file" id="f-photo" accept="image/*" onchange="loadPhoto(event)" />
+    <div class="upload-icon" id="upload-icon">🖼️</div>
+    <p id="upload-text"><span>Click to upload</span> or drag & drop<br/>PNG, JPG, WEBP — auto-compressed</p>
+    <img id="photo-thumb" alt="preview" />
+  </div>
+
+  <!-- Size meter -->
+  <div class="size-meter">
+    <span id="size-label">Estimated size: — </span>
+    <span id="size-note" style="color:#4caf50;font-weight:600;"></span>
+    <div class="size-bar-track">
+      <div class="size-bar-fill" id="size-bar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="btn-copy" onclick="copySignature()">📋 Copy Signature for Gmail</button>
+  <div class="toast" id="toast">✅ Copied! Open Gmail → Settings → Signature and paste with Cmd+V or Ctrl+V.</div>
+
+  <div class="instructions">
+    <p>
+      <strong>How to paste into Gmail:</strong><br/>
+      1. Click the button above to copy<br/>
+      2. Gmail → ⚙️ Settings → See all settings<br/>
+      3. Scroll to <strong>Signature</strong> → click in the box<br/>
+      4. Press <strong>Cmd+V</strong> (Mac) or <strong>Ctrl+V</strong> (Windows)<br/>
+      5. Save changes at the bottom ✓
+    </p>
+  </div>
+</div>
+
+<div class="preview-panel">
+  <h2>Live Preview</h2>
+  <div id="sig-preview"></div>
+</div>
+
+<script>
+  let compressedPhotoDataURL = null;
+
+  // ── Etherealize logo — real brand asset (PNG, transparent, 200x49px) ──
+  const ETHEREALIZE_LOGO_URI = 'data:image/png;base64,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';
+
+  // LinkedIn icon — PNG (Gmail-safe, SVGs are stripped)
+  const LINKEDIN_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAYAAACohjseAAAABmJLR0QA/wD/AP+gvaeTAAAEPUlEQVRoge2aXWhcRRiGn5k9yf4lm2zbNF3boDRpgmmxaK2UtkmMkhujd2KjVxVpLBQVlYgghYAgosReCCE2EgTRkga0IEhFbdL4g4opakp+tFGENDEhJtGYXfbvjBc2JRt395xNd3t2lzx3e+abOe+7M2fmmzlHsEK7ku6pwRaFeBy4E9hMbjEL4ksl1RuBrvqvVi4KAG/rpyVB5ehDqCbr9KUNpeD1wOm6F0EoG+1KyqWrHyHIB3MAQsChgn2/a+Ghdy4Id+vFxxTiPatVZQCFLvbLa89cPiKEUM9L4C6rlWQKJdR9EvBaLSRziK2SazNpniKk1QoyTd4b1FIJrt7m4kBlMR6HxtgffgbHFwlFVKa0pQVTBqWAjpYqjjX4EKue2InZAI90jjA27c+UvhvG1BB9umkHrffGmgOo3Oqk78Ru7Fr2jnRTyo41+BKW7Sxz0LQ7e1caQ4N2TXLbFkfSmOptzrQJSjeGBsNR3XAiWQ7qaROUbgwN6gouji8mLFcKBpKUW42pZ/DkB7/xTzAat6xrYIrxXJ9FhyeXaXz1Rz7+aZ5Ff4RwVDEytcxzZyZo653ItMYbQrhaB1NeqTUpiOjZvcCvsK4FLFfMgclMZofXTpmnIG5ZVFdcnlxmredd5U6KHLa4dQIh/aZlP4YG7Zrkh5fvxlmQuLPbeifovDB1/XeNz8Wl9n1J220+NczAWOzsW6gJ9mx3U+LSUAquzASYXAgaSUyKocFCTSQ1B+B1x/ZuqdN4YGxy/xcjBDTfsZknG33UVZdSYIvNB6cXQ7z79QxvfnaV+eWwYbtrSWk3kW5KXBrdR6tp3pv4CNZXWsgLD1RwvNHH0bfH+eTyfEr3sCxLtknBuaf2JDW3Go9T4+yJWh40Gb+CZQYPVHq4Z2dxSnU0Keh5ooZd5eZzX8sM3n6La1313HYbHS2VpuMzYrB2u9swpqGmdN3t31/rZW9FkanYrNipBiM6KsXc4eH9ZabiLJ1FPx9ZoO3sr4xP+7FJwcEqDy89dCt11SWGdQ9WeUzdw7IenFsKc6Rz5PpOJKorvvj5L5pPDXPu0pxh/YpNdlP3sczgNxN/Ewj/f6Mc1RXPvH8Ffyj5JnpLcfzUcS2WGZxdCiUsm1sK0z+6kLS+XZMU2ePnuquxzKDRMccvMwHDNtae8sUjK2bReBgNUbNkrcF0sWEw19kwmOtsGMx1NgzmOhsGo7oianCSHYzEplXhiHGaFYnenNNxww2vP6TzaNcoNQlecoajijPfzsZc6x9d4MOhOdz2+P9fMKLo/W42btnqNgKh+G+0VjDzAcS6Xr7kEhLIZ4NKgko+VnKbP6VA9FutImMIhqQSsoM8HaZKVz3S/9bh70G9YrWYDHA+0F3fJwH8p+tPKniN/OnJ8w574REQKubYxnl88JDQeRbUYRDlVqlbJ3MIhpSuegLd9X0gFMC//PlNUecyhkMAAAAASUVORK5CYII=';
+
+  // ── Image compression — square crop with face-biased vertical position ──
+  function compressImage(file, outPx, quality, callback) {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const sw = img.naturalWidth, sh = img.naturalHeight;
+      // Square crop: take the smaller dimension as crop size
+      const cropSize = Math.min(sw, sh);
+      // Center horizontally; bias vertically toward top (15% offset) so faces land in frame
+      const srcX = (sw - cropSize) / 2;
+      const srcY = (sh - cropSize) * 0.15;
+      // Output a square canvas at outPx × outPx
+      const canvas = document.createElement('canvas');
+      canvas.width = outPx; canvas.height = outPx;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, srcX, srcY, cropSize, cropSize, 0, 0, outPx, outPx);
+      URL.revokeObjectURL(url);
+      callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = url;
+  }
+
+  function loadPhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    // 220px output (2× display size for retina), quality 0.85
+    compressImage(file, 220, 0.85, (dataURL) => {
+      compressedPhotoDataURL = dataURL;
+      const thumb = document.getElementById('photo-thumb');
+      thumb.src = dataURL;
+      thumb.style.display = 'block';
+      document.getElementById('upload-icon').style.display = 'none';
+      document.getElementById('upload-text').style.display = 'none';
+      update();
+    });
+  }
+
+  function val(id) { return document.getElementById(id).value.trim(); }
+  function formatWebsite(url) { return url.replace(/^https?:\/\//, '').replace(/\/$/, ''); }
+
+  function updateSizeMeter(html) {
+    const bytes = new Blob([html]).size;
+    const kb = (bytes / 1024).toFixed(1);
+    const pct = Math.min((bytes / 10240) * 100, 100);
+    const bar = document.getElementById('size-bar');
+    const label = document.getElementById('size-label');
+    const note = document.getElementById('size-note');
+    label.textContent = `Estimated size: ${kb} KB / 10 KB`;
+    bar.style.width = pct + '%';
+    if (pct < 70) {
+      bar.style.background = '#4caf50';
+      note.textContent = '✓ Good';
+      note.style.color = '#4caf50';
+    } else if (pct < 90) {
+      bar.style.background = '#ff9800';
+      note.textContent = '⚠ Getting large';
+      note.style.color = '#ff9800';
+    } else {
+      bar.style.background = '#f44336';
+      note.textContent = '✗ May exceed Gmail limit — try a smaller photo';
+      note.style.color = '#f44336';
+    }
+  }
+
+  function buildSignatureHTML() {
+    const name       = val('f-name')       || 'Full Name';
+    const title      = val('f-title')      || 'Job Title';
+    const email      = val('f-email')      || 'email@etherealize.com';
+    const linkedin   = val('f-linkedin');
+    const website    = val('f-website')    || 'https://etherealize.com';
+    const disclaimer = val('f-disclaimer');
+    const photo      = compressedPhotoDataURL;
+    const websiteDisplay = formatWebsite(website);
+
+    const photoCell = photo
+      ? `<img src="${photo}" width="110" height="110" style="border-radius:50%;display:block;width:110px;height:110px;" alt="${name}" />`
+      : `<div style="width:110px;height:110px;border-radius:50%;background:#e8e0f0;text-align:center;line-height:110px;font-size:40px;">👤</div>`;
+
+    const nameDisplay = name.toUpperCase();
+
+    const linkedinRow = linkedin ? `
+        <tr>
+          <td colspan="3" style="padding-top:10px;">
+            <a href="${linkedin}" style="text-decoration:none;display:inline-block;">
+              <img src="${LINKEDIN_URI}" width="28" height="28" alt="LinkedIn" style="display:block;width:28px;height:28px;border-radius:4px;" />
+            </a>
+          </td>
+        </tr>` : '';
+
+    const disclaimerSection = disclaimer ? `
+      <tr>
+        <td colspan="3" style="padding-top:20px;">
+          <div style="height:1px;background-color:#e0e0e0;margin-bottom:14px;font-size:0;line-height:0;">&nbsp;</div>
+          <p style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:11px;color:#999999;line-height:1.6;margin:0;max-width:560px;">${disclaimer}</p>
+        </td>
+      </tr>` : '';
+
+    return `<table cellpadding="0" cellspacing="0" border="0" style="font-family:'Figtree',Arial,Helvetica,sans-serif;border-collapse:collapse;border-spacing:0;">
+  <tr>
+    <td valign="top" align="left" style="padding-right:6px;">
+      ${photoCell}
+      <div style="height:12px;font-size:12px;line-height:12px;">&nbsp;</div>
+      <img src="${ETHEREALIZE_LOGO_URI}" width="110" height="27" alt="Etherealize" style="display:block;width:110px;height:27px;" />
+    </td>
+    <td style="width:1px;background-color:#d0d0d0;padding:0;font-size:0;line-height:0;">&nbsp;</td>
+    <td valign="top" style="padding-left:20px;">
+      <p style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#111111;letter-spacing:.7px;margin:0 0 4px 0;">${nameDisplay}</p>
+      <p style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#666666;margin:0 0 16px 0;">${title}</p>
+      <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+        <tr>
+          <td valign="middle" style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#999999;padding-right:5px;white-space:nowrap;">E:</td>
+          <td valign="middle">
+            <a href="mailto:${email}" style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#1a0dab;text-decoration:none;">${email}</a>
+          </td>
+        </tr>
+        <tr>
+          <td valign="middle" style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#999999;padding-right:5px;padding-top:3px;white-space:nowrap;">W:</td>
+          <td valign="middle" style="padding-top:3px;">
+            <a href="${website}" style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#1a0dab;text-decoration:none;">${websiteDisplay}</a>
+          </td>
+        </tr>
+        ${linkedinRow}
+      </table>
+    </td>
+  </tr>
+  ${disclaimerSection}
+</table>`;
+  }
+
+  // ── Persistence via localStorage ──
+  const STORAGE_KEY = 'etherealize_sig_v1';
+
+  function saveToStorage() {
+    const data = {
+      name:       document.getElementById('f-name').value,
+      title:      document.getElementById('f-title').value,
+      email:      document.getElementById('f-email').value,
+      linkedin:   document.getElementById('f-linkedin').value,
+      website:    document.getElementById('f-website').value,
+      disclaimer: document.getElementById('f-disclaimer').value,
+      photo:      compressedPhotoDataURL || null,
+    };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+  }
+
+  function loadFromStorage() {
+    let data;
+    try { data = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) {}
+    if (!data) return;
+    if (data.name)       document.getElementById('f-name').value       = data.name;
+    if (data.title)      document.getElementById('f-title').value      = data.title;
+    if (data.email)      document.getElementById('f-email').value      = data.email;
+    if (data.linkedin)   document.getElementById('f-linkedin').value   = data.linkedin;
+    if (data.website)    document.getElementById('f-website').value    = data.website;
+    if (data.disclaimer) document.getElementById('f-disclaimer').value = data.disclaimer;
+    if (data.photo) {
+      compressedPhotoDataURL = data.photo;
+      const thumb = document.getElementById('photo-thumb');
+      thumb.src = data.photo;
+      thumb.style.display = 'block';
+      document.getElementById('upload-icon').style.display = 'none';
+      document.getElementById('upload-text').style.display = 'none';
+    }
+  }
+
+  function update() {
+    const html = buildSignatureHTML();
+    document.getElementById('sig-preview').innerHTML = html;
+    updateSizeMeter(html);
+    saveToStorage();
+  }
+
+  async function copySignature() {
+    const html = buildSignatureHTML();
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([html], { type: 'text/html' }),
+          'text/plain': new Blob([
+            document.getElementById('sig-preview').innerText
+          ], { type: 'text/plain' }),
+        })
+      ]);
+    } catch (e) {
+      // Fallback: select rendered content
+      const sigEl = document.getElementById('sig-preview');
+      const range = document.createRange();
+      range.selectNode(sigEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('copy');
+      sel.removeAllRanges();
+    }
+    const toast = document.getElementById('toast');
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 4500);
+  }
+
+  loadFromStorage();
+  update();
+</script>
+</body>
+</html>
