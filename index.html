@@ -15,12 +15,118 @@
       font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: #f0f0f3;
       min-height: 100vh;
+      padding: 0;
+      margin: 0;
+    }
+
+    /* ── Top navigation ── */
+    .top-nav {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    }
+    .nav-logo {
+      font-size: 13px;
+      font-weight: 700;
+      color: #6200ea;
+      letter-spacing: .5px;
+      margin-right: 20px;
+      padding: 16px 0;
+      user-select: none;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 16px 14px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #999;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color .2s, border-color .2s;
+      font-family: 'Figtree', inherit;
+    }
+    .tab-btn.active { color: #6200ea; border-bottom-color: #6200ea; }
+    .tab-btn:hover:not(.active) { color: #444; }
+
+    /* ── Tab content wrappers ── */
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      padding: 40px 20px;
       gap: 36px;
+      padding: 40px 20px;
     }
+
+    /* ── AI Headshot extras ── */
+    .ai-result-img {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+    .ai-error {
+      color: #c62828;
+      background: #ffeaea;
+      border: 1px solid #ffcdd2;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      margin-top: 10px;
+      display: none;
+    }
+    .key-input-wrap { position: relative; margin-bottom: 6px; }
+    .key-toggle {
+      position: absolute;
+      right: 10px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      cursor: pointer; font-size: 14px;
+      color: #bbb; padding: 0;
+      line-height: 1;
+    }
+    .progress-dots { text-align: center; margin-top: 32px; }
+    .progress-dots span {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #6200ea;
+      margin: 0 3px;
+      animation: dot-bounce 1.2s infinite;
+    }
+    .progress-dots span:nth-child(2) { animation-delay: .2s; }
+    .progress-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes dot-bounce {
+      0%,80%,100% { transform: scale(.6); opacity: .4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    .download-btn {
+      display: none;
+      width: 100%;
+      padding: 10px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+      font-family: 'Figtree', inherit;
+      transition: background .2s;
+    }
+    .download-btn:hover { background: #333; }
 
     .panel {
       background: #fff;
@@ -162,6 +268,14 @@
 </head>
 <body>
 
+<nav class="top-nav">
+  <span class="nav-logo">✦ Etherealize Tools</span>
+  <button class="tab-btn active" id="tab-sig" onclick="switchTab('sig')">✉️ Signature Generator</button>
+  <button class="tab-btn" id="tab-ai" onclick="switchTab('ai')">✨ AI Headshot</button>
+</nav>
+
+<div class="tab-content active" id="view-sig">
+
 <div class="panel">
   <h1>✉️ Signature Generator</h1>
   <p class="sub">Fill in the details, then copy to Gmail.</p>
@@ -171,6 +285,9 @@
 
   <label>Job Title</label>
   <input type="text" id="f-title" placeholder="Founding Engineer" oninput="update()" />
+
+  <label>Mobile</label>
+  <input type="text" id="f-mobile" placeholder="555-867-5309" oninput="update()" />
 
   <label>Email Address</label>
   <div style="display:flex;align-items:center;border:1px solid #e4e4e4;border-radius:8px;background:#fafafa;margin-bottom:14px;overflow:hidden;transition:border .2s;" id="email-wrap">
@@ -226,6 +343,69 @@
   <h2>Live Preview</h2>
   <div id="sig-preview"></div>
 </div>
+
+</div><!-- /view-sig -->
+
+<!-- ══════════════════════════════════ AI HEADSHOT TAB ══════════════════════════════════ -->
+<div class="tab-content" id="view-ai">
+
+  <div class="panel">
+    <h1>✨ AI Headshot Generator</h1>
+    <p class="sub">Transform any photo into a polished professional headshot.</p>
+
+    <label>Replicate API Key</label>
+    <div class="key-input-wrap">
+      <input type="password" id="ai-api-key" placeholder="r8_••••••••••••••••••••••••••••••••••••••"
+        style="width:100%;padding:9px 38px 9px 12px;border:1px solid #e4e4e4;border-radius:8px;font-size:13px;color:#222;outline:none;background:#fafafa;font-family:inherit;box-sizing:border-box;"
+        oninput="saveAIKey()" />
+      <button class="key-toggle" onclick="toggleKeyVisibility()" title="Show/hide">👁</button>
+    </div>
+    <p style="font-size:11.5px;color:#aaa;margin-bottom:16px;line-height:1.6;">
+      Free key at <a href="https://replicate.com" target="_blank" style="color:#6200ea;text-decoration:none;font-weight:600;">replicate.com</a> → Account → API tokens. Key is saved locally in your browser only.
+    </p>
+
+    <label>Photo</label>
+    <div class="upload-area" id="ai-upload-area">
+      <input type="file" id="ai-photo" accept="image/*" onchange="loadAIPhoto(event)" />
+      <div class="upload-icon" id="ai-upload-icon">🖼️</div>
+      <p id="ai-upload-text"><span>Click to upload</span> or drag & drop<br/>PNG, JPG, WEBP</p>
+      <img id="ai-photo-thumb" alt="preview"
+        style="display:none;width:72px;height:72px;border-radius:8px;object-fit:cover;margin:8px auto 0;border:2px solid #6200ea;" />
+    </div>
+
+    <label>Style Prompt</label>
+    <textarea id="ai-prompt" style="width:100%;padding:9px 12px;border:1px solid #e4e4e4;border-radius:8px;font-size:12.5px;color:#333;outline:none;background:#fafafa;font-family:inherit;resize:vertical;min-height:90px;margin-bottom:6px;line-height:1.6;box-sizing:border-box;">Ultra-consistent corporate executive headshot style used for company team pages.
+Chest-up studio portrait of a professional employee img, centered and facing camera with a slight natural shoulder angle. Neutral confident expression. Wearing professional business attire (dark blazer or suit jacket with light shirt). Make sure this person is wearing a collar shirt.
+Camera setup: 85mm portrait lens, f/4 aperture, studio photography, sharp focus on face, shallow depth of field.
+Lighting setup: soft studio key light positioned 45° from camera left with balanced fill light from camera right. Even illumination across the face. Soft professional lighting with natural shadow definition. No rim lighting. No backlight glow.
+Background: flat neutral gray studio background, evenly lit across the entire frame. No radial gradient, no spotlight effect, no halo, no glow behind the subject. The background tone should remain consistent from edge to edge.
+Color treatment: pure monochrome black-and-white conversion with professional tonal grading. High contrast but natural skin tones. Rich blacks and clean highlights.
+Composition rules: subject perfectly centered, portrait cropped from mid-chest upward, shoulders visible, head positioned slightly above centerline, symmetrical framing, minimal negative space.
+Output framing: circular portrait crop for executive team grid layout.
+Style: modern technology company leadership headshot, consistent studio photography, minimal, clean, professional.</textarea>
+    <p style="font-size:11.5px;color:#aaa;margin-bottom:16px;line-height:1.6;">Paste your own Freepik-style prompt here, or use the default. Keep <strong style="color:#888;">img</strong> in the text — it's the trigger word that tells the AI to reference the person's face.</p>
+
+    <div class="divider"></div>
+
+    <button class="btn-copy" id="ai-generate-btn" onclick="generateHeadshot()">✨ Generate Headshot</button>
+    <div class="ai-error" id="ai-error"></div>
+  </div>
+
+  <div class="preview-panel" style="min-width:340px;max-width:520px;">
+    <h2>Result</h2>
+    <div id="ai-progress" style="display:none;">
+      <div class="progress-dots"><span></span><span></span><span></span></div>
+      <p style="font-size:13px;color:#aaa;text-align:center;margin-top:12px;" id="ai-progress-text">Sending to AI…</p>
+    </div>
+    <p style="font-size:13px;color:#ccc;" id="ai-placeholder-text">Your AI-generated professional headshot will appear here.</p>
+    <img id="ai-result-img" class="ai-result-img" alt="Generated headshot" />
+    <button class="download-btn" id="ai-download-btn" onclick="downloadHeadshot()">⬇ Download Headshot</button>
+    <p style="font-size:11.5px;color:#bbb;margin-top:12px;line-height:1.7;display:none;" id="ai-use-hint">
+      ✅ Happy with it? Go to the <strong>Signature Generator</strong> tab and upload this photo as the headshot.
+    </p>
+  </div>
+
+</div><!-- /view-ai -->
 
 <script>
   let compressedPhotoDataURL = null;
@@ -307,6 +487,7 @@
   function buildSignatureHTML() {
     const name       = val('f-name')       || 'Full Name';
     const title      = val('f-title')      || 'Job Title';
+    const mobile     = val('f-mobile');
     const emailPrefix = val('f-email');
     const email       = emailPrefix ? emailPrefix + '@etherealize.com' : 'email@etherealize.com';
     const linkedin   = val('f-linkedin');
@@ -354,9 +535,15 @@
       <p style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#111111;margin:0 0 4px 0;">${nameDisplay}</p>
       <p style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#666666;margin:0 0 16px 0;">${title}</p>
       <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-        <tr>
-          <td valign="middle" style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#999999;padding-right:5px;white-space:nowrap;">E:</td>
+        ${mobile ? `<tr>
+          <td valign="middle" style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#999999;padding-right:5px;white-space:nowrap;">M:</td>
           <td valign="middle">
+            <a href="tel:${mobile}" style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#1a0dab;text-decoration:none;">${mobile}</a>
+          </td>
+        </tr>` : ''}
+        <tr>
+          <td valign="middle" style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#999999;padding-right:5px;white-space:nowrap;${mobile ? 'padding-top:3px;' : ''}">E:</td>
+          <td valign="middle" ${mobile ? 'style="padding-top:3px;"' : ''}>
             <a href="mailto:${email}" style="font-family:'Figtree',Arial,Helvetica,sans-serif;font-size:13px;color:#1a0dab;text-decoration:none;">${email}</a>
           </td>
         </tr>
@@ -381,6 +568,7 @@
     const data = {
       name:       document.getElementById('f-name').value,
       title:      document.getElementById('f-title').value,
+      mobile:     document.getElementById('f-mobile').value,
       email:      document.getElementById('f-email').value,
       linkedin:   document.getElementById('f-linkedin').value,
       website:    document.getElementById('f-website').value,
@@ -396,6 +584,7 @@
     if (!data) return;
     if (data.name)       document.getElementById('f-name').value       = data.name;
     if (data.title)      document.getElementById('f-title').value      = data.title;
+    if (data.mobile)     document.getElementById('f-mobile').value     = data.mobile;
     if (data.email)      document.getElementById('f-email').value      = data.email;
     if (data.linkedin)   document.getElementById('f-linkedin').value   = data.linkedin;
     if (data.website)    document.getElementById('f-website').value    = data.website;
@@ -446,6 +635,195 @@
 
   loadFromStorage();
   update();
+
+  // ══════════════════════════════════
+  //  Tab switching
+  // ══════════════════════════════════
+  function switchTab(tab) {
+    ['sig', 'ai'].forEach(t => {
+      document.getElementById('view-' + t).classList.toggle('active', t === tab);
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    });
+  }
+
+  // ══════════════════════════════════
+  //  AI Headshot — Replicate API
+  // ══════════════════════════════════
+  const AI_KEY_STORAGE = 'replicate_api_key_v1';
+  let aiPhotoFile = null;
+  let aiGeneratedURL = null;
+
+  // Restore saved API key on load
+  (function restoreAIKey() {
+    try {
+      const k = localStorage.getItem(AI_KEY_STORAGE);
+      if (k) document.getElementById('ai-api-key').value = k;
+    } catch(e) {}
+  })();
+
+  function saveAIKey() {
+    try { localStorage.setItem(AI_KEY_STORAGE, document.getElementById('ai-api-key').value); } catch(e) {}
+  }
+
+  function toggleKeyVisibility() {
+    const inp = document.getElementById('ai-api-key');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  function loadAIPhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    aiPhotoFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const thumb = document.getElementById('ai-photo-thumb');
+      thumb.src = e.target.result;
+      thumb.style.display = 'block';
+      document.getElementById('ai-upload-icon').style.display = 'none';
+      document.getElementById('ai-upload-text').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function showAIError(msg) {
+    const el = document.getElementById('ai-error');
+    el.textContent = '⚠️ ' + msg;
+    el.style.display = 'block';
+    document.getElementById('ai-progress').style.display = 'none';
+    const btn = document.getElementById('ai-generate-btn');
+    btn.disabled = false;
+    btn.textContent = '✨ Generate Headshot';
+  }
+
+  function hideAIError() {
+    document.getElementById('ai-error').style.display = 'none';
+  }
+
+  function setAIProgress(text) {
+    document.getElementById('ai-progress').style.display = 'block';
+    document.getElementById('ai-progress-text').textContent = text;
+    document.getElementById('ai-placeholder-text').style.display = 'none';
+    hideAIError();
+  }
+
+  async function generateHeadshot() {
+    hideAIError();
+    const apiKey = document.getElementById('ai-api-key').value.trim();
+    if (!apiKey) { showAIError('Please enter your Replicate API key first.'); return; }
+    if (!aiPhotoFile) { showAIError('Please upload a photo first.'); return; }
+
+    const prompt = document.getElementById('ai-prompt').value.trim() ||
+      'professional headshot photo of a person img, studio lighting, neutral gray background, business attire';
+
+    const btn = document.getElementById('ai-generate-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating…';
+    document.getElementById('ai-result-img').style.display = 'none';
+    document.getElementById('ai-download-btn').style.display = 'none';
+    document.getElementById('ai-use-hint').style.display = 'none';
+    setAIProgress('Reading photo…');
+
+    // Convert uploaded image to base64 data URI
+    const base64Image = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(aiPhotoFile);
+    });
+
+    setAIProgress('Sending to AI model…');
+
+    let prediction;
+    try {
+      const resp = await fetch('https://api.replicate.com/v1/models/tencentarc/photomaker/predictions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: {
+            input_image: base64Image,
+            prompt: prompt,
+            style_name: 'Photographic (Default)',
+            num_outputs: 1,
+            guidance_scale: 5,
+            num_inference_steps: 50,
+          }
+        })
+      });
+
+      if (resp.status === 401) { showAIError('Invalid API key — double-check your Replicate token.'); return; }
+      if (!resp.ok) {
+        let detail = resp.statusText;
+        try { const d = await resp.json(); detail = d.detail || d.error || detail; } catch(e) {}
+        showAIError('API error: ' + detail); return;
+      }
+      prediction = await resp.json();
+    } catch(e) {
+      showAIError('Network error. Check your internet connection and try again.'); return;
+    }
+
+    // Poll until the prediction completes
+    const progressMessages = [
+      'Analysing facial features…',
+      'Applying professional lighting…',
+      'Styling for headshot…',
+      'Refining the portrait…',
+      'Adding finishing touches…',
+      'Almost there…',
+    ];
+    let attempts = 0;
+
+    while (prediction.status !== 'succeeded' && prediction.status !== 'failed' && prediction.status !== 'canceled') {
+      await new Promise(r => setTimeout(r, 2500));
+      setAIProgress(progressMessages[Math.min(attempts, progressMessages.length - 1)]);
+      attempts++;
+
+      try {
+        const pollResp = await fetch('https://api.replicate.com/v1/predictions/' + prediction.id, {
+          headers: { 'Authorization': 'Bearer ' + apiKey }
+        });
+        prediction = await pollResp.json();
+      } catch(e) { /* keep polling */ }
+
+      if (attempts > 72) { showAIError('Timed out after 3 minutes. Try again.'); return; }
+    }
+
+    document.getElementById('ai-progress').style.display = 'none';
+    btn.disabled = false;
+    btn.textContent = '✨ Generate Headshot';
+
+    if (prediction.status !== 'succeeded') {
+      showAIError('Generation failed: ' + (prediction.error || 'Unknown error')); return;
+    }
+
+    const outputURL = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
+    if (!outputURL) { showAIError('No image returned. Try again.'); return; }
+
+    aiGeneratedURL = outputURL;
+    const img = document.getElementById('ai-result-img');
+    img.src = outputURL;
+    img.style.display = 'block';
+    document.getElementById('ai-download-btn').style.display = 'block';
+    document.getElementById('ai-use-hint').style.display = 'block';
+  }
+
+  async function downloadHeadshot() {
+    if (!aiGeneratedURL) return;
+    try {
+      const resp = await fetch(aiGeneratedURL);
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'headshot-ai.png';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 100);
+    } catch(e) {
+      window.open(aiGeneratedURL, '_blank');
+    }
+  }
 </script>
 </body>
 </html>
