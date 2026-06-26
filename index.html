@@ -128,6 +128,79 @@
     }
     .download-btn:hover { background: #333; }
 
+    /* ── Saved Signatures ── */
+    .saved-page {
+      width: 100%;
+      max-width: 960px;
+      padding: 40px 32px;
+    }
+    .saved-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+    .saved-header h1 { font-size: 17px; font-weight: 700; color: #111; }
+    .saved-header p { font-size: 12.5px; color: #999; margin-top: 3px; }
+    .saved-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 16px;
+    }
+    .saved-card {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 14px;
+      padding: 20px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 6px;
+      transition: box-shadow .2s, border-color .2s;
+      box-shadow: 0 1px 6px rgba(0,0,0,.05);
+    }
+    .saved-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.1); border-color: #d4b8ff; }
+    .saved-card-name { font-size: 13.5px; font-weight: 700; color: #111; margin: 4px 0 0; }
+    .saved-card-title { font-size: 11.5px; color: #aaa; margin: 0; line-height: 1.4; }
+    .saved-card-date { font-size: 10.5px; color: #ccc; margin-top: 2px; }
+    .saved-card-actions { display: flex; gap: 6px; margin-top: 10px; width: 100%; }
+    .btn-load {
+      flex: 1; padding: 8px 0;
+      background: #6200ea; color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: background .2s;
+    }
+    .btn-load:hover { background: #4a00b0; }
+    .btn-delete {
+      padding: 8px 10px;
+      background: none; color: #ccc;
+      border: 1px solid #eee;
+      border-radius: 8px; font-size: 13px;
+      cursor: pointer; font-family: inherit;
+      transition: all .2s;
+    }
+    .btn-delete:hover { background: #ffeaea; border-color: #ffcdd2; color: #f44336; }
+    .btn-save-sig {
+      width: 100%; padding: 11px;
+      background: #fff; color: #6200ea;
+      border: 1.5px solid #6200ea;
+      border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: background .2s, color .2s;
+      margin-bottom: 10px;
+    }
+    .btn-save-sig:hover { background: #f5f0ff; }
+    .save-toast {
+      display: none; margin-bottom: 8px;
+      background: #ede7ff; border: 1px solid #c4aaff;
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 12.5px; color: #5200c7; text-align: center;
+    }
+
     .panel {
       background: #fff;
       border-radius: 16px;
@@ -272,6 +345,7 @@
   <span class="nav-logo">✦ Etherealize Tools</span>
   <button class="tab-btn active" id="tab-sig" onclick="switchTab('sig')">✉️ Signature Generator</button>
   <button class="tab-btn" id="tab-ai" onclick="switchTab('ai')">✨ AI Headshot</button>
+  <button class="tab-btn" id="tab-saved" onclick="switchTab('saved')">📁 Saved Signatures</button>
 </nav>
 
 <div class="tab-content active" id="view-sig">
@@ -324,6 +398,8 @@
 
   <div class="divider"></div>
 
+  <div class="save-toast" id="save-toast"></div>
+  <button class="btn-save-sig" onclick="saveSignature()">💾 Save Signature</button>
   <button class="btn-copy" onclick="copySignature()">📋 Copy Signature for Gmail</button>
   <div class="toast" id="toast">✅ Copied! Open Gmail → Settings → Signature and paste with Cmd+V or Ctrl+V.</div>
 
@@ -406,6 +482,19 @@ Style: modern technology company leadership headshot, consistent studio photogra
   </div>
 
 </div><!-- /view-ai -->
+
+<!-- ══════════════════════════════════ SAVED SIGNATURES TAB ══════════════════════════════════ -->
+<div class="tab-content" id="view-saved" style="justify-content:center;">
+  <div class="saved-page">
+    <div class="saved-header">
+      <div>
+        <h1>📁 Saved Signatures</h1>
+        <p>Load any signature to edit it, then copy to Gmail.</p>
+      </div>
+    </div>
+    <div class="saved-grid" id="saved-grid"></div>
+  </div>
+</div><!-- /view-saved -->
 
 <script>
   let compressedPhotoDataURL = null;
@@ -640,11 +729,127 @@ Style: modern technology company leadership headshot, consistent studio photogra
   //  Tab switching
   // ══════════════════════════════════
   function switchTab(tab) {
-    ['sig', 'ai'].forEach(t => {
+    ['sig', 'ai', 'saved'].forEach(t => {
       document.getElementById('view-' + t).classList.toggle('active', t === tab);
       document.getElementById('tab-' + t).classList.toggle('active', t === tab);
     });
+    if (tab === 'saved') renderSavedGrid();
   }
+
+  // ══════════════════════════════════
+  //  Saved Signatures
+  // ══════════════════════════════════
+  const SAVED_SIGS_KEY = 'etherealize_saved_sigs_v1';
+
+  function getSavedSigs() {
+    try { return JSON.parse(localStorage.getItem(SAVED_SIGS_KEY)) || []; } catch(e) { return []; }
+  }
+
+  function saveSignature() {
+    const name = document.getElementById('f-name').value.trim() || 'Unnamed';
+    const sigs = getSavedSigs();
+    const existingIdx = sigs.findIndex(s => s.name.trim().toLowerCase() === name.toLowerCase());
+
+    const entry = {
+      id: existingIdx >= 0 ? sigs[existingIdx].id : Date.now().toString(),
+      name:       document.getElementById('f-name').value,
+      title:      document.getElementById('f-title').value,
+      mobile:     document.getElementById('f-mobile').value,
+      email:      document.getElementById('f-email').value,
+      linkedin:   document.getElementById('f-linkedin').value,
+      website:    document.getElementById('f-website').value,
+      disclaimer: document.getElementById('f-disclaimer').value,
+      photo:      compressedPhotoDataURL || null,
+      savedAt:    new Date().toISOString(),
+    };
+
+    if (existingIdx >= 0) {
+      sigs[existingIdx] = entry;
+    } else {
+      sigs.unshift(entry);
+    }
+
+    try { localStorage.setItem(SAVED_SIGS_KEY, JSON.stringify(sigs)); } catch(e) {}
+
+    const toast = document.getElementById('save-toast');
+    toast.textContent = existingIdx >= 0 ? `✅ Updated ${name}` : `✅ Saved ${name}`;
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 3000);
+  }
+
+  function loadSignature(id) {
+    const sig = getSavedSigs().find(s => s.id === id);
+    if (!sig) return;
+
+    document.getElementById('f-name').value      = sig.name      || '';
+    document.getElementById('f-title').value     = sig.title     || '';
+    document.getElementById('f-mobile').value    = sig.mobile    || '';
+    document.getElementById('f-email').value     = sig.email     || '';
+    document.getElementById('f-linkedin').value  = sig.linkedin  || '';
+    document.getElementById('f-website').value   = sig.website   || '';
+    document.getElementById('f-disclaimer').value = sig.disclaimer || '';
+
+    if (sig.photo) {
+      compressedPhotoDataURL = sig.photo;
+      const thumb = document.getElementById('photo-thumb');
+      thumb.src = sig.photo;
+      thumb.style.display = 'block';
+      document.getElementById('upload-icon').style.display = 'none';
+      document.getElementById('upload-text').style.display = 'none';
+    } else {
+      compressedPhotoDataURL = null;
+      document.getElementById('photo-thumb').style.display = 'none';
+      document.getElementById('upload-icon').style.display = '';
+      document.getElementById('upload-text').style.display = '';
+    }
+
+    update();
+    switchTab('sig');
+  }
+
+  function deleteSignature(id, name) {
+    if (!confirm(`Delete ${name}'s signature?`)) return;
+    const sigs = getSavedSigs().filter(s => s.id !== id);
+    try { localStorage.setItem(SAVED_SIGS_KEY, JSON.stringify(sigs)); } catch(e) {}
+    renderSavedGrid();
+  }
+
+  function renderSavedGrid() {
+    const sigs = getSavedSigs();
+    const grid = document.getElementById('saved-grid');
+
+    if (sigs.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#ccc;">
+        <div style="font-size:48px;">📭</div>
+        <p style="font-size:14px;margin-top:12px;color:#bbb;">No saved signatures yet.<br/>Fill in the generator and click <strong style="color:#999;">Save Signature</strong>.</p>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = sigs.map(sig => {
+      const initials = (sig.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const photoHTML = sig.photo
+        ? `<img src="${sig.photo}" style="width:68px;height:68px;border-radius:50%;object-fit:cover;display:block;" />`
+        : `<div style="width:68px;height:68px;border-radius:50%;background:#6200ea;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;">${initials}</div>`;
+      const date = sig.savedAt
+        ? new Date(sig.savedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : '';
+      const safeName = (sig.name || '').replace(/'/g, "\\'");
+
+      return `<div class="saved-card">
+        ${photoHTML}
+        <p class="saved-card-name">${sig.name || '—'}</p>
+        <p class="saved-card-title">${sig.title || '—'}</p>
+        <p class="saved-card-date">Saved ${date}</p>
+        <div class="saved-card-actions">
+          <button class="btn-load" onclick="loadSignature('${sig.id}')">✏️ Load & Edit</button>
+          <button class="btn-delete" onclick="deleteSignature('${sig.id}', '${safeName}')" title="Delete">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  renderSavedGrid();
 
   // ══════════════════════════════════
   //  AI Headshot — Replicate API
