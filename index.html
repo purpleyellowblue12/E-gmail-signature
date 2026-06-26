@@ -361,7 +361,7 @@
   <input type="text" id="f-title" placeholder="Founding Engineer" oninput="update()" />
 
   <label>Mobile</label>
-  <input type="text" id="f-mobile" placeholder="555-867-5309" oninput="update()" />
+  <input type="text" id="f-mobile" placeholder="555-867-5309" oninput="formatMobile(this); update()" maxlength="12" />
 
   <label>Email Address</label>
   <div style="display:flex;align-items:center;border:1px solid #e4e4e4;border-radius:8px;background:#fafafa;margin-bottom:14px;overflow:hidden;transition:border .2s;" id="email-wrap">
@@ -544,6 +544,14 @@ Style: modern technology company leadership headshot, consistent studio photogra
       document.getElementById('upload-text').style.display = 'none';
       update();
     });
+  }
+
+  function formatMobile(input) {
+    const digits = input.value.replace(/\D/g, '').slice(0, 10);
+    let out = digits.slice(0, 3);
+    if (digits.length >= 4) out += '-' + digits.slice(3, 6);
+    if (digits.length >= 7) out += '-' + digits.slice(6, 10);
+    input.value = out;
   }
 
   function val(id) { return document.getElementById(id).value.trim(); }
