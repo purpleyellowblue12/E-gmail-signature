@@ -191,9 +191,9 @@
 
 <nav class="top-nav">
   <span class="nav-logo">✦ Etherealize Tools</span>
-  <a class="tab-link" href="index.html#sig">✉️ Signature Generator</a>
-  <a class="tab-link" href="index.html#ai">✨ AI Headshot</a>
-  <a class="tab-link" href="index.html#saved">📁 Saved Signatures</a>
+  <a class="tab-link" href="index.html?v=3#sig">✉️ Signature Generator</a>
+  <a class="tab-link" href="index.html?v=3#ai">✨ AI Headshot</a>
+  <a class="tab-link" href="index.html?v=3#saved">📁 Saved Signatures</a>
   <a class="tab-link active" href="apple-mail.html">💻 Apple Mail</a>
 </nav>
 
@@ -289,7 +289,7 @@
           </li>
           <li>Close the Settings window. You don't need to quit Mail; the command below does it for you.</li>
           <li>
-            Click the button below, open <strong>Terminal</strong> (⌘ Space → type “Terminal”), paste with <span class="kbd">⌘V</span>, and press <span class="kbd">Return</span>.
+            Click the button below, open <strong>Terminal</strong> (⌘ Space → type “Terminal”), paste with <span class="kbd">⌘V</span>, and press <span class="kbd">Return</span>. A few hundred lines will scroll by. That's normal. Wait for the line that starts with <strong>Done</strong> or <strong>STOPPED</strong>.
             <button class="btn-primary" onclick="copyInstallCommand()">📋 Copy install command</button>
             <div class="toast" id="toast-install">✅ Copied! Paste it into Terminal and press Return.</div>
           </li>
@@ -346,13 +346,16 @@
       const canvas = document.createElement('canvas');
       canvas.width = outPx; canvas.height = outPx;
       const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, outPx, outPx);
       ctx.beginPath();
       ctx.arc(outPx / 2, outPx / 2, outPx / 2, 0, Math.PI * 2);
       ctx.closePath();
       ctx.clip();
       ctx.drawImage(img, srcX, srcY, cropSize, cropSize, 0, 0, outPx, outPx);
       URL.revokeObjectURL(url);
-      callback(canvas.toDataURL('image/png'));
+      // JPEG keeps the install command small enough to paste into Terminal quickly
+      callback(canvas.toDataURL('image/jpeg', 0.85));
     };
     img.src = url;
   }
@@ -463,19 +466,38 @@
   }
 
   function buildInstallCommand() {
-    const b64 = btoa(buildMailSignatureBody());
-    const fdaMsg = 'Terminal needs Full Disk Access. Open System Settings > Privacy & Security > Full Disk Access, turn on Terminal, quit and reopen Terminal, then paste this command again.';
-    const notFoundMsg = `Could not find a Mail signature containing ${PLACEHOLDER}. Check steps 1-2 on the signature page, then try again.`;
-    return [
-      `B='${b64}';`,
-      `if ! ls ~/Library/Mail >/dev/null 2>&1; then echo "${fdaMsg}";`,
-      `else osascript -e 'tell application "Mail" to quit' >/dev/null 2>&1; sleep 3;`,
-      `F=$(grep -rl --include='*.mailsignature' '${PLACEHOLDER}' ~/Library/Mobile\\ Documents/com~apple~mail ~/Library/Mail 2>/dev/null | head -1);`,
-      `if [ -z "$F" ]; then echo "${notFoundMsg}";`,
-      `else chflags nouchg "$F"; T=$(mktemp);`,
-      `{ sed '/^$/q' "$F"; printf '%s' "$B" | base64 -D; } > "$T" && cat "$T" > "$F" && rm -f "$T" && chflags uchg "$F" && echo "Done! Your Etherealize signature is installed. Reopening Mail..." && open -a Mail;`,
-      `fi; fi`,
-    ].join(' ');
+    // Base64 wrapped into short lines: one giant line freezes Terminal when pasted
+    const b64 = btoa(buildMailSignatureBody()).replace(/(.{76})/g, '$1\n');
+    const lines = [
+      `B='`,
+      b64,
+      `'`,
+      `(`,
+      `echo "Installing your Etherealize signature..."`,
+      `if ! ls ~/Library/Mail >/dev/null 2>&1; then echo "STOPPED: Terminal needs Full Disk Access. Open System Settings > Privacy & Security > Full Disk Access, turn on Terminal, quit and reopen Terminal, then paste the command again."; exit 1; fi`,
+      `if pgrep -x Mail >/dev/null; then`,
+      `  echo "Quitting Mail... (if macOS asks to let Terminal control Mail, click OK)"`,
+      `  osascript -e 'tell application "Mail" to quit' >/dev/null 2>&1 &`,
+      `  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do pgrep -x Mail >/dev/null || break; sleep 1; done`,
+      `  if pgrep -x Mail >/dev/null; then echo "STOPPED: Mail is still open. Close any open drafts or pop-ups, quit Mail with Cmd+Q, then paste the command again."; exit 1; fi`,
+      `fi`,
+      `sleep 1`,
+      `echo "Looking for the placeholder signature..."`,
+      `[ -n "$ZSH_VERSION" ] && setopt nullglob`,
+      `FOUND=0`,
+      `for F in ~/Library/Mail/V*/MailData/Signatures/*.mailsignature ~/Library/Mobile\\ Documents/com~apple~mail/Data/V*/Signatures/*.mailsignature; do`,
+      `  [ -f "$F" ] || continue`,
+      `  grep -q '${PLACEHOLDER}' "$F" || continue`,
+      `  chflags nouchg "$F" 2>/dev/null; T=$(mktemp)`,
+      `  { sed '/^$/q' "$F"; printf '%s' "$B" | tr -d '\\n\\r ' | base64 -D; } > "$T" && cat "$T" > "$F" && chflags uchg "$F" && FOUND=1`,
+      `  rm -f "$T"`,
+      `done`,
+      `if [ "$FOUND" = 0 ]; then echo "STOPPED: Could not find a Mail signature containing ${PLACEHOLDER}. Redo steps 1-2 on the signature page (make sure you clicked away from the signature box so Mail saved it), then paste the command again."; exit 1; fi`,
+      `echo "Done. Your Etherealize signature is installed. Reopening Mail..."`,
+      `open -a Mail`,
+      `)`,
+    ];
+    return lines.join('\n') + '\n';
   }
 
   async function writeText(text) {
